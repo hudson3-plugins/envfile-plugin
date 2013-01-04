@@ -13,6 +13,11 @@
   <name>Hudson Environment File Plugin</name>
   <url>https://wiki.hudson-ci.org/display/HUDSON/Envfile+Plugin</url>
 
+
+  <properties>
+    <hudsonTags>buildwrapper</hudsonTags>
+  </properties>
+
   <developers>
     <developer>
       <id>schristou88</id>
