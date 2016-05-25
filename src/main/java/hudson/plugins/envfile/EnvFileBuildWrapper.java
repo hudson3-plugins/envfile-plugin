@@ -10,7 +10,7 @@ import hudson.model.BuildListener;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
 
-import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
@@ -82,7 +82,7 @@ public class EnvFileBuildWrapper extends BuildWrapper{
             console(Messages.EnvFileBuildWrapper_Console_ReadingFile());
 
             Properties props = new Properties();
-            FileInputStream fis = null;
+            InputStream fis = null;
             String resolvedPath = Util.replaceMacro(path, currentMap);
             console(Messages.EnvFileBuildWrapper_Console_PathToFile() + ": " + resolvedPath);
 
@@ -90,7 +90,7 @@ public class EnvFileBuildWrapper extends BuildWrapper{
             {
                 if(path != null)
                 {
-                    fis = new FileInputStream(resolvedPath);
+                    fis = InputStreamFactory.createInputStream(resolvedPath);
                     props.load(fis);
                 }
                 else
@@ -119,9 +119,9 @@ public class EnvFileBuildWrapper extends BuildWrapper{
 
         /**
          * Helper to close environment file.
-         * @param fis {@link FileInputStream} for environment file.
+         * @param fis {@link InputStream} for environment file.
          */
-        private void close(FileInputStream fis)
+        private void close(InputStream fis)
         {
             try
             {
