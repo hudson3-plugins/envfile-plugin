@@ -1,5 +1,6 @@
 package hudson.plugins.envfile;
 
+import java.util.StringTokenizer;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Launcher;
@@ -143,33 +144,41 @@ public class EnvFileBuildWrapper extends BuildWrapper{
             Map<String, String> newFileEnvMap = new HashMap<String, String>();
 
             tmpFileEnvMap.putAll(currentMap);
-
-            //Fetch env variables from fil as properties
-            Properties envProps = readPropsFromFile(filePath, currentMap);
-
-            if(envProps != null || envProps.size() < 1)
-            {
-
-                //Add env variables to temporary env map and file map containing new variables.
-                for (Entry<Object, Object> prop : envProps.entrySet())
+                
+            StringTokenizer st = new StringTokenizer(filePath, "\r\n|\n|\r");
+            while (st.hasMoreElements()) {
+    
+                String uniqFile = Util.fixEmpty((String)st.nextElement());
+                
+                //Fetch env variables from fil as properties
+                Properties envProps = readPropsFromFile(uniqFile, currentMap);
+    
+                if(envProps != null || envProps.size() < 1)
                 {
-                    String key = prop.getKey().toString();
-                    String value = prop.getValue().toString();
-                    newFileEnvMap.put(key, value);
-                    tmpFileEnvMap.put(key, value);
+    
+                    //Add env variables to temporary env map and file map containing new variables.
+                    for (Entry<Object, Object> prop : envProps.entrySet())
+                    {
+                        String key = prop.getKey().toString();
+                        String value = prop.getValue().toString();
+                        newFileEnvMap.put(key, value);
+                        tmpFileEnvMap.put(key, value);
+                    }
+    
+                    // Resolve all variables against each other.
+                    EnvVars.resolve(tmpFileEnvMap);
+    
+                    //Print resolved variables and copy resolved value to return map.
+                    for(String key : newFileEnvMap.keySet())
+                    {
+                        newFileEnvMap.put(key, tmpFileEnvMap.get(key));
+                        console(key + "=" + newFileEnvMap.get(key));
+                    }
+    
                 }
-
-                // Resolve all variables against each other.
-                EnvVars.resolve(tmpFileEnvMap);
-
-                //Print resolved variables and copy resolved value to return map.
-                for(String key : newFileEnvMap.keySet())
-                {
-                    newFileEnvMap.put(key, tmpFileEnvMap.get(key));
-                    console(key + "=" + newFileEnvMap.get(key));
-                }
-
+                
             }
+                
             return newFileEnvMap;
         }
 
