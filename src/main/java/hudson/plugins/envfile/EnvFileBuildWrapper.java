@@ -1,5 +1,6 @@
 package hudson.plugins.envfile;
 
+import java.util.StringTokenizer;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Launcher;
@@ -10,7 +11,7 @@ import hudson.model.BuildListener;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
 
-import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
@@ -82,7 +83,7 @@ public class EnvFileBuildWrapper extends BuildWrapper{
             console(Messages.EnvFileBuildWrapper_Console_ReadingFile());
 
             Properties props = new Properties();
-            FileInputStream fis = null;
+            InputStream fis = null;
             String resolvedPath = Util.replaceMacro(path, currentMap);
             console(Messages.EnvFileBuildWrapper_Console_PathToFile() + ": " + resolvedPath);
 
@@ -90,7 +91,7 @@ public class EnvFileBuildWrapper extends BuildWrapper{
             {
                 if(path != null)
                 {
-                    fis = new FileInputStream(resolvedPath);
+                    fis = InputStreamFactory.createInputStream(resolvedPath);
                     props.load(fis);
                 }
                 else
@@ -119,9 +120,9 @@ public class EnvFileBuildWrapper extends BuildWrapper{
 
         /**
          * Helper to close environment file.
-         * @param fis {@link FileInputStream} for environment file.
+         * @param fis {@link InputStream} for environment file.
          */
-        private void close(FileInputStream fis)
+        private void close(InputStream fis)
         {
             try
             {
@@ -143,33 +144,41 @@ public class EnvFileBuildWrapper extends BuildWrapper{
             Map<String, String> newFileEnvMap = new HashMap<String, String>();
 
             tmpFileEnvMap.putAll(currentMap);
-
-            //Fetch env variables from fil as properties
-            Properties envProps = readPropsFromFile(filePath, currentMap);
-
-            if(envProps != null || envProps.size() < 1)
-            {
-
-                //Add env variables to temporary env map and file map containing new variables.
-                for (Entry<Object, Object> prop : envProps.entrySet())
+                
+            StringTokenizer st = new StringTokenizer(filePath, "\r\n|\n|\r");
+            while (st.hasMoreElements()) {
+    
+                String uniqFile = Util.fixEmpty((String)st.nextElement());
+                
+                //Fetch env variables from fil as properties
+                Properties envProps = readPropsFromFile(uniqFile, currentMap);
+    
+                if(envProps != null || envProps.size() < 1)
                 {
-                    String key = prop.getKey().toString();
-                    String value = prop.getValue().toString();
-                    newFileEnvMap.put(key, value);
-                    tmpFileEnvMap.put(key, value);
+    
+                    //Add env variables to temporary env map and file map containing new variables.
+                    for (Entry<Object, Object> prop : envProps.entrySet())
+                    {
+                        String key = prop.getKey().toString();
+                        String value = prop.getValue().toString();
+                        newFileEnvMap.put(key, value);
+                        tmpFileEnvMap.put(key, value);
+                    }
+    
+                    // Resolve all variables against each other.
+                    EnvVars.resolve(tmpFileEnvMap);
+    
+                    //Print resolved variables and copy resolved value to return map.
+                    for(String key : newFileEnvMap.keySet())
+                    {
+                        newFileEnvMap.put(key, tmpFileEnvMap.get(key));
+                        console(key + "=" + newFileEnvMap.get(key));
+                    }
+    
                 }
-
-                // Resolve all variables against each other.
-                EnvVars.resolve(tmpFileEnvMap);
-
-                //Print resolved variables and copy resolved value to return map.
-                for(String key : newFileEnvMap.keySet())
-                {
-                    newFileEnvMap.put(key, tmpFileEnvMap.get(key));
-                    console(key + "=" + newFileEnvMap.get(key));
-                }
-
+                
             }
+                
             return newFileEnvMap;
         }
 
